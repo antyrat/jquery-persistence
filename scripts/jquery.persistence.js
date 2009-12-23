@@ -12,20 +12,29 @@
 
 (function($) {
 
+	/* Global variables */
 	var storage,sDatabase;
 	var correctEngine = false;
 	var engines = new Array("WhatWG","LocalStorage","SessionStorage","WebKit","userData","Gears");
 	
+	/**
+	 * Initializing jQuery persistence plugin
+	 *
+	 * @param {Object}  options Plugin settings
+	 */
 	$.fn.persistenceInit = function(options) {
 		settings = $.extend({}, $.fn.persistenceInit.defaults, options);
 		if(!settings.method) {
 			settings.method = $.fn.persistenceInit.getStorageMethod();
 		} else {
+
+			/* Check storage engine avaliability */
 			for(var i=0;i<engines.length;i++) {
 				if(engines[i] == settings.method) {
 					correctEngine = true;
 				}
 			}
+
 			if(correctEngine) {
 				debug('Storage Method: '+settings.method);
 				if(settings.method == "WebKit") {
@@ -252,6 +261,11 @@
 		}
 	};
 
+	/**
+	 * Get avaliable storage method
+	 *
+	 * @return {String} Returns storage method
+	 */
 	$.fn.persistenceInit.getStorageMethod = function() {
 		correctEngine = true;
 		if(typeof(globalStorage) != "undefined") {
@@ -315,7 +329,10 @@
 		    return "undefined";
 		}
 	};
-	
+
+	/**
+	 * Default settings
+	 */
 	$.fn.persistenceInit.defaults = {
 		domain: location.hostname,
 		method: null,
