@@ -14,7 +14,7 @@
 
 	var storage,sDatabase;
 	var correctEngine = false;
-	var engines = new Array("WhatWG","LocalStorage","SessionStorage","WebKit","userData");
+	var engines = new Array("WhatWG","LocalStorage","SessionStorage","WebKit","userData","Gears");
 	
 	$.fn.persistenceInit = function(options) {
 		settings = $.extend({}, $.fn.persistenceInit.defaults, options);
@@ -33,6 +33,18 @@
 						sDatabase = openDatabase("persistence", "1.0", "Custom storage")
 						if (!sDatabase) {
 							debug("Failed to open the database on disk");
+						} else {
+							sDatabase.transaction(
+								function(tx) {
+									tx.executeSql("CREATE TABLE IF NOT EXISTS tblstorage (sName TEXT, sValue TEXT, unique(sName))",
+										[], 
+										function() { },
+										function(tx, error) {
+											debug("Database error: "+error.message);
+										}
+									)
+								}
+							);
 						}
 					} catch(err) {
 						debug("Error occured:"+err.message);
@@ -46,6 +58,17 @@
 						storage.addBehavior("#default#userData");
 						storage.load(settings.userDataNamespace);
 					}					
+				} else if(settings.method == "Gears") {
+					try {
+						sDatabase = google.gears.factory.create('beta.database');
+						if (sDatabase) {
+							sDatabase.open('persistence');
+							sDatabase.execute('CREATE TABLE IF NOT EXISTS tblstorage (sName TEXT, sValue TEXT, unique(sName))');
+						}
+				 
+					} catch (ex) {
+						debug('Could not create database: ' + ex.message);
+					}
 				}
 			} else {
 				debug('Storage Method: undefined');
@@ -99,7 +122,11 @@
 					storage = document.getElementById(settings.storageElement);
 					storage.setAttribute(key, value);
 					storage.save(settings.userDataNamespace);				
-					debug('Value vor key ['+key+'] is: '+value);
+					debug('Value vor key ['+key+'] now is: '+value);
+					break;
+				case "Gears":
+					sDatabase.execute('REPLACE INTO tblstorage (sName, sValue) VALUES (?,?)', [key, value]);
+					debug('Value vor key ['+key+'] now is: '+value);
 					break;
 				default:
 					debug('Error: value vor key ['+key+'] is not set. Unknown storage method.');
@@ -159,7 +186,13 @@
 					var value = storage.getAttribute(key);
 					debug('Value vor key ['+key+'] is: '+value);
 					return value;
-					break;	
+					break;
+				case "Gears":
+					var result = sDatabase.execute('SELECT sValue FROM tblstorage WHERE sName=?',[key]);
+					var value = result.field(0);
+					debug('Value vor key ['+key+'] is: '+value);
+					return value;
+					break;
 				default:
 					debug('Error: unable to get value for key ['+key+']. Unknown storage method.');
 					break;					
@@ -208,6 +241,10 @@
 					storage.save(settings.userDataNamespace);
 					debug('Key ['+key+'] deleted');
 					break;
+				case "Gears":
+					sDatabase.execute('DELETE FROM tblstorage WHERE sName=?',[key]);
+					debug('Key ['+key+'] deleted');
+					break;					
 				default:
 					debug('Error: value vor key ['+key+'] is not deleted. Unknown storage method.');
 					break;
@@ -257,8 +294,22 @@
 				document.body.appendChild(storage);
 				storage.addBehavior("#default#userData");
 				storage.load(settings.userDataNamespace);
-			}			
+			}
+			debug('Storage Method: userData');
 			return "userData";
+		} else if(window.google && google.gears){
+			try {
+				sDatabase = google.gears.factory.create('beta.database');
+				if (sDatabase) {
+					sDatabase.open('persistence');
+					sDatabase.execute('CREATE TABLE IF NOT EXISTS tblstorage (sName TEXT, sValue TEXT, unique(sName))');
+				}
+		 
+			} catch (ex) {
+				debug('Could not create database: ' + ex.message);
+			}
+			debug('Storage Method: Gears');
+			return "Gears";
 		} else {
 			debug('Storage Method: undefined');
 		    return "undefined";
