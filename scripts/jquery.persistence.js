@@ -1,12 +1,14 @@
 /**
- * Persistence plugin
- *
- * Copyright (c) 2009 Sergey Shchur (sergey.shchur@gmail.com)
- * Dual licensed under the MIT and GPL licenses:
- * http://www.opensource.org/licenses/mit-license.php
- * http://www.gnu.org/licenses/gpl.html
- *
- */
+  * jQuery Persistence plugin
+  *
+  * Copyright (c) 2009 Sergey Shchur (sergey.shchur@gmail.com)
+  * Dual licensed under the MIT and GPL licenses:
+  * http://www.opensource.org/licenses/mit-license.php
+  * http://www.gnu.org/licenses/gpl.html
+  *
+  * @author Sergey Shchur sergey.shchur@gmail.com
+  * @version 0.0.1
+  */
 
 (function($) {
 
@@ -28,7 +30,7 @@
 				debug('Storage Method: '+settings.method);
 				if(settings.method == "WebKit") {
 					try {
-						sDatabase = openDatabase("persistance", "1.0", "Custom storage")
+						sDatabase = openDatabase("persistence", "1.0", "Custom storage")
 						if (!sDatabase) {
 							debug("Failed to open the database on disk");
 						}
@@ -54,7 +56,13 @@
 			$this.html('test');
 		});
 	};
-
+	
+	/**
+	 * Set storage value
+	 *
+	 * @param  {String}  key The key of the storage variable
+	 * @param {String}  value The value of the storage variable
+	 */
 	$.fn.persistencePut = function(key, value) {
 		if(correctEngine) {
 			switch(settings.method) {
@@ -93,10 +101,19 @@
 					storage.save(settings.userDataNamespace);				
 					debug('Value vor key ['+key+'] is: '+value);
 					break;
+				default:
+					debug('Error: value vor key ['+key+'] is not set. Unknown storage method.');
+					break;
 			}
 		}
 	};
 	
+	/**
+	 * Get storage value
+	 *
+	 * @param  {String}  key The key of the storage variable
+	 * @return {String}  Returns a storage valiable value
+	 */	
 	$.fn.persistenceGet = function(key) {
 		if(correctEngine) {
 			switch(settings.method) {
@@ -142,7 +159,58 @@
 					var value = storage.getAttribute(key);
 					debug('Value vor key ['+key+'] is: '+value);
 					return value;
+					break;	
+				default:
+					debug('Error: unable to get value for key ['+key+']. Unknown storage method.');
 					break;					
+			}
+		}
+	};
+	
+	/**
+	 * Remove storage value
+	 *
+	 * @param  {String}  key The key of the storage variable
+	 */	
+	$.fn.persistenceRemove = function(key) {
+		if(correctEngine) {
+			switch(settings.method) {
+				case "WhatWG":
+					var storage = globalStorage[settings.domain];
+					delete storage[key];
+					debug('Key ['+key+'] deleted');
+					break;
+				case "LocalStorage":
+					var value = window.localStorage.removeItem(key);
+					debug('Key ['+key+'] deleted');
+					break;
+				case "SessionStorage":
+					var value = window.sessionStorage.removeItem(key);
+					debug('Key ['+key+'] deleted');
+					break;
+				case "WebKit":
+					sDatabase.transaction(
+						function(tx) {
+							tx.executeSql("DELETE FROM tblstorage WHERE sName=?",
+								[key],
+								function() { }, 
+								function(tx, error) {
+									debug("Database error: "+error.message);
+								}
+							)
+						}
+					);
+					debug('Key ['+key+'] deleted');
+					break;
+				case "userData":
+					storage = document.getElementById(settings.storageElement);
+					storage.removeAttribute(key);
+					storage.save(settings.userDataNamespace);
+					debug('Key ['+key+'] deleted');
+					break;
+				default:
+					debug('Error: value vor key ['+key+'] is not deleted. Unknown storage method.');
+					break;
 			}
 		}
 	};
@@ -160,7 +228,7 @@
 		    return "SessionStorage";			
 		} else if(typeof(window.openDatabase) != "undefined") {
             try {
-                sDatabase = openDatabase("persistance", "1.0", "Custom storage")
+                sDatabase = openDatabase("persistence", "1.0", "Custom storage")
                 if (!sDatabase) {
                     debug("Failed to open the database on disk");
                 } else {
