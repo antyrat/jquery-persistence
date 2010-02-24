@@ -7,7 +7,7 @@
   * http://www.gnu.org/licenses/gpl.html
   *
   * @author Sergey Shchur sergey.shchur@gmail.com
-  * @version 0.0.1
+  * @version 0.0.2
   */
 
 (function($) {
